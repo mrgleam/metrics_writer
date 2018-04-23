@@ -10,4 +10,7 @@ curl -XPOST -d 'name=test&labels={"labels1":"test1","labels2":"test2"}' http://l
 ```
 
 ## SS
-![ss1](example/screenshop/Screen Shot 2561-04-23 at 21.30.53.png)
+
+![ss1](https://raw.githubusercontent.com/mrgleam/metrics_writer/master/example/screenshot/Screen%20Shot%202561-04-23%20at%2021.30.53.png)
+
+![ss2](https://raw.githubusercontent.com/mrgleam/metrics_writer/master/example/screenshot/Screen%20Shot%202561-04-23%20at%2021.30.39.png)
