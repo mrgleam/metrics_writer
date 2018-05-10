@@ -11,15 +11,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var (
-	size = prometheus.NewGauge(prometheus.GaugeOpts{
-		Namespace: "my_company",
-		Subsystem: "storage",
-		Name:      "documents_total_size_bytes",
-		Help:      "The total size of all documents in the storage.",
-	})
-)
-
 var counter = make(map[string]float64)
 var indexed = make(map[string]prometheus.Gauge)
 
@@ -27,42 +18,42 @@ func main() {
 	router := gin.Default()
 	router.GET("/metrics", gin.WrapH(prometheus.Handler()))
 	router.GET("/", Index)
-	router.POST("/counter/metrics", Counter)
+	router.POST("/counter/metrics", HandlerCounter)
 
 	router.Run(":8080")
 }
 
-func register(indexed prometheus.Gauge) {
+func restartRegister(indexed prometheus.Gauge) {
 	prometheus.Unregister(indexed)
+	prometheus.Register(indexed)
 }
 
+func GetHash(content string) string {
+	h512 := sha512.New()
+	io.WriteString(h512, content)
+	hash := string(h512.Sum(nil))
+	return hash
+}
 func Index(c *gin.Context) {
 	c.String(http.StatusOK, "Welcome!")
 }
 
-func Counter(c *gin.Context) {
-	name := c.PostForm("name")
-	inputlabels := c.PostForm("labels")
+func Counter(name string, inputlabels string, clientIP string) (string, string) {
 	keepuniqindexed := ""
-	h512 := sha512.New()
-	io.WriteString(h512, name+inputlabels)
-	uniq := string(h512.Sum(nil))
-	h2512 := sha512.New()
+	uniq := GetHash(name + inputlabels)
 	var labels []string
 	byt := []byte(inputlabels)
 	var dat map[string]string
 	if err := json.Unmarshal(byt, &dat); err != nil {
 		panic(err)
 	}
-	dat["instance"] = c.ClientIP()
+	dat["instance"] = clientIP
 	for key, value := range dat {
 		log.Println("Key:", key, "Value:", value)
 		labels = append(labels, key)
 		keepuniqindexed = keepuniqindexed + key
 	}
-
-	io.WriteString(h2512, name+keepuniqindexed)
-	indexeduniq := string(h2512.Sum(nil))
+	indexeduniq := GetHash(name + keepuniqindexed)
 
 	indexed[indexeduniq] = prometheus.NewGauge(prometheus.GaugeOpts{
 		ConstLabels: dat,
@@ -71,9 +62,14 @@ func Counter(c *gin.Context) {
 		Name:        name,
 		Help:        "The number of documents indexed.",
 	})
+	restartRegister(indexed[indexeduniq])
+	return uniq, indexeduniq
+}
 
-	prometheus.Unregister(indexed[indexeduniq])
-	prometheus.Register(indexed[indexeduniq])
+func HandlerCounter(c *gin.Context) {
+	name := c.PostForm("name")
+	inputlabels := c.PostForm("labels")
+	uniq, indexeduniq := Counter(name, inputlabels, c.ClientIP())
 	counter[uniq] = counter[uniq] + 1.00
 	indexed[indexeduniq].Set(counter[uniq])
 
