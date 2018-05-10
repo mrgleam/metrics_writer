@@ -1,4 +1,7 @@
 # Metrics writer
+
+[![Build Status](https://travis-ci.org/mrgleam/metrics_writer.svg?branch=master)](https://travis-ci.org/mrgleam/metrics_writer)
+
  Prometheus push gateway is great tools for push metrics from your application but you must count the metrics in your application before send to Prometheus push gateway.
 
  Metrics writer, you can send name and labels only via HTTP and Metrics writer will count your metrics automaticly.
